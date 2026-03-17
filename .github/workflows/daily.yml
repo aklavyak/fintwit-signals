@@ -1,0 +1,53 @@
+name: Daily Fintwit Briefing
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # 7 AM ET (noon UTC)
+  workflow_dispatch: {}     # manual trigger from GitHub UI
+
+jobs:
+  briefing:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore database cache
+        uses: actions/cache/restore@v4
+        with:
+          path: fintwit.db
+          key: fintwit-db
+          restore-keys: fintwit-db-
+
+      - name: Write seed accounts
+        run: echo "${{ secrets.SEEDS_LIST }}" > seeds.txt
+
+      - name: Run pipeline
+        run: python main.py --daily
+        env:
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+
+      - name: Save database cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: fintwit.db
+          key: fintwit-db-${{ github.run_number }}
+
+      - name: Upload briefing artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: briefing-${{ github.run_number }}
+          path: output/
+          retention-days: 30
