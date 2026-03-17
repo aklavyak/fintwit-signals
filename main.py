@@ -390,6 +390,7 @@ def main():
 
     # Unattended mode: plain console + file logging
     if args.daily:
+        os.makedirs(DATA_DIR, exist_ok=True)
         console = Console(force_terminal=False, no_color=True)
         logging.basicConfig(
             level=logging.INFO,
